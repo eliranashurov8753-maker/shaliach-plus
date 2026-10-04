@@ -21,8 +21,9 @@ const SAFE_EXT = ['.html', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.webmanifes
 const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'db.json');
 
 /* ---------- מסד נתונים (קובץ JSON) ---------- */
-let db = { orders: [], states: {}, store: null, seq: 1000 };
+let db = { orders: [], states: {}, store: null, seq: 1000, chats: {}, credit: {} };
 try { db = Object.assign(db, JSON.parse(fs.readFileSync(DB_FILE, 'utf8'))); } catch (e) { /* קובץ חדש */ }
+db.chats = db.chats || {}; db.credit = db.credit || {};
 let saveT = null;
 function save() {
   clearTimeout(saveT);
@@ -48,8 +49,8 @@ function forCourier(o) {
   if (!o) return o;
   const c = Object.assign({}, o);
   c.courierEarn = r1((Number(o.fee) || 0) * 0.84);
-  c.collect = o.pay === 'cash' ? goodsOf(o) + (Number(o.fee) || 0) : 0;
-  delete c.fee; delete c.surcharge; delete c.split; delete c.src;
+  c.collect = o.pay === 'cash' ? Math.max(0, r1(goodsOf(o) + (Number(o.fee) || 0) - (Number(o.creditUsed) || 0))) : 0; // זיכוי מקטין את הגבייה
+  delete c.fee; delete c.surcharge; delete c.split; delete c.src; delete c.credits; delete c.creditUsed;
   return c;
 }
 function view(o, role) { return role === 'courier' ? forCourier(o) : o; }
@@ -91,6 +92,12 @@ function serveStatic(req, res, pathname) {
 
 /* ---------- סטטוסים ---------- */
 // 0 התקבלה · 1 אושרה · 2 בהכנה · 3 מוכנה/מחכה לשליח · 4 שליח בדרך לאיסוף · 6 נאסף · 7 נמסר
+/* ---------- צ'אט לפי הזמנה ---------- */
+// מי רשאי לראות/לכתוב בכל שיחה
+const THREADS = { 'cust-cour': ['customer', 'courier'], 'cust-biz': ['customer', 'business'], 'biz-cour': ['business', 'courier'],
+  'adm-cust': ['admin', 'customer'], 'adm-cour': ['admin', 'courier'], 'adm-biz': ['admin', 'business'] };
+function threadsForRole(role) { return Object.keys(THREADS).filter(k => role === 'admin' || THREADS[k].includes(role)); }
+
 const ACTIONS = { approve: 1, prep: 2, ready: 3, accept: 4, pickup: 6, deliver: 7, cancel: 3 };
 
 /* ---------- ניתוב ---------- */
@@ -130,6 +137,7 @@ const server = http.createServer(async (req, res) => {
       o.courier = null; o.courierId = null;
       o.src = o.src || (o.type === 'free' ? 'any' : 'app');
       o.split = split(o);
+      if (o.creditUsed && o.customerId) db.credit[o.customerId] = Math.max(0, r1((db.credit[o.customerId] || 0) - Number(o.creditUsed)));
       db.orders.push(o); save();
       return send(res, 200, view(o, role));
     }
@@ -152,6 +160,42 @@ const server = http.createServer(async (req, res) => {
       save();
       return send(res, 200, view(o, role));
     }
+    // צ'אט
+    const mc = p.match(/^\/api\/orders\/([^/]+)\/chat$/);
+    if (mc) {
+      const oid = decodeURIComponent(mc[1]);
+      if (req.method === 'GET') {
+        const role = q.get('role') || 'customer', all = db.chats[oid] || {}, out = {};
+        threadsForRole(role).forEach(k => { if (all[k]) out[k] = all[k]; });
+        return send(res, 200, { threads: out });
+      }
+      if (req.method === 'POST') {
+        const b = await readBody(req), role = b.role || q.get('role');
+        const th = b.thread, text = String(b.text || '').slice(0, 1000).trim();
+        if (!THREADS[th] || !text) return send(res, 400, { error: 'thread/text' });
+        if (role !== 'admin' && !THREADS[th].includes(role)) return send(res, 403, { error: 'not a participant' });
+        const from = role === 'admin' ? (b.from || 'admin') : role; // לא מתחזים לצד אחר
+        const m = { from, text, ts: Date.now() }; if (b.sys) m.sys = true;
+        db.chats[oid] = db.chats[oid] || {}; (db.chats[oid][th] = db.chats[oid][th] || []).push(m);
+        if (db.chats[oid][th].length > 300) db.chats[oid][th].shift();
+        save(); return send(res, 200, { ok: true });
+      }
+    }
+
+    // זיכוי ללקוח (מנהל בלבד)
+    const mcr = p.match(/^\/api\/orders\/([^/]+)\/credit$/);
+    if (mcr && req.method === 'POST') {
+      const b = await readBody(req);
+      if ((b.role || q.get('role')) !== 'admin') return send(res, 403, { error: 'admin only' });
+      const o = db.orders.find(x => x.id === decodeURIComponent(mcr[1]));
+      const amount = Math.max(0, Math.round((Number(b.amount) || 0) * 10) / 10);
+      if (!amount) return send(res, 400, { error: 'amount' });
+      const rec = { amount, reason: b.reason || '', fault: b.fault || 'platform', ts: new Date().toISOString() };
+      if (o) { (o.credits = o.credits || []).push(rec); if (o.customerId) db.credit[o.customerId] = r1((db.credit[o.customerId] || 0) + amount); }
+      save(); return send(res, 200, { ok: true, credit: rec });
+    }
+    if (p === '/api/credit' && req.method === 'GET') return send(res, 200, { balance: db.credit[q.get('userId') || ''] || 0 });
+
     if (p.startsWith('/api/')) return send(res, 404, { error: 'unknown endpoint' });
 
     serveStatic(req, res, p);

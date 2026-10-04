@@ -108,8 +108,8 @@ input[type=range]{width:100%; accent-color:var(--brand)}
 .rolemini .g{font-size:20px}
 
 /* chat overlay */
-#chat,#support{position:fixed;inset:0;background:rgba(23,26,59,.35);display:none;align-items:flex-end;justify-content:center;z-index:100}
-#chat .sheet,#support .sheet{width:100%;max-width:440px;height:80%;background:var(--white);border-radius:24px 24px 0 0;display:flex;flex-direction:column;overflow:hidden}
+#chat,#support,#credit{position:fixed;inset:0;background:rgba(23,26,59,.35);display:none;align-items:flex-end;justify-content:center;z-index:100}
+#chat .sheet,#support .sheet,#credit .sheet{width:100%;max-width:440px;height:80%;background:var(--white);border-radius:24px 24px 0 0;display:flex;flex-direction:column;overflow:hidden}
 #chatMsgs,#supportMsgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
 .msg{max-width:76%;padding:10px 14px;border-radius:16px;font-size:15px}
 .msg.them{align-self:flex-start;background:var(--brand);color:#fff}
@@ -117,22 +117,47 @@ input[type=range]{width:100%; accent-color:var(--brand)}
 .chatbar{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
 .chatbar input{flex:1;border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:none;font-size:15px}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#102b55;color:#fff;padding:12px 18px;border-radius:14px;font-weight:600;font-size:14px;z-index:120;opacity:0;transition:.3s}
-.toast.show{opacity:1}
+.toast.show{opacity:1} .toast{pointer-events:none}
+
+/* order chat */
+.ctabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--white)}
+.ctab{flex:none;border:1px solid var(--line);background:var(--white);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;color:var(--sub);position:relative;white-space:nowrap}
+.ctab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.ctab.off{opacity:.45}
+.cbadge{position:absolute;top:-5px;left:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--coral);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1}
+.chatbtn{position:relative}
+.msg .who{display:block;font-size:10.5px;font-weight:700;opacity:.7;margin-bottom:2px}
+.msg .tm{display:block;font-size:10px;opacity:.55;margin-top:3px}
+.msg.sys{align-self:center;background:transparent;border:none;color:var(--faint);font-size:12px;text-align:center;padding:2px 10px;max-width:90%}
+.msg.adm{background:#102b55;color:#fff}
+.qrs{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 0;background:var(--white)}
+.qr{flex:none;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 11px;font-size:12.5px;color:var(--ink);white-space:nowrap}
+.crop{border:1.5px solid var(--line);background:var(--white);border-radius:14px;padding:11px 12px;text-align:right;width:100%;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.crop.on{border-color:var(--brand);background:var(--brandSoft)}
+.crchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.crchip{border:1.5px solid var(--line);background:var(--white);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600}
+.crchip.on{border-color:var(--ink);background:var(--ink);color:#fff}
 </style>
 </head>
 <body>
 <div id="app"></div>
 
 <div id="chat"><div class="sheet">
-  <div class="row sp pad" style="border-bottom:1px solid var(--line)">
-    <div><b>שלומי בן דוד</b><div class="faint" style="font-size:11.5px;margin-top:2px">🔒 שיחה דרך מספר החברה · הפרטים חסויים</div></div>
-    <button data-act="chatClose" style="font-size:22px;color:var(--faint)">×</button>
+  <div class="row sp pad" style="border-bottom:1px solid var(--line);padding-bottom:10px">
+    <div style="min-width:0"><b id="chatTitle">צ'אט</b><div id="chatSub" class="faint" style="font-size:11.5px;margin-top:2px">🔒 הפרטים האישיים חסויים · שיחה דרך החברה</div></div>
+    <button data-ch="close" style="font-size:22px;color:var(--faint)">×</button>
   </div>
+  <div class="ctabs" id="chatTabs"></div>
   <div id="chatMsgs"></div>
-  <div class="chatbar">
-    <input id="chatInput" placeholder="הודעה…">
-    <button class="btn primary sm" data-act="chatSend">שלח</button>
+  <div id="chatQr" class="qrs"></div>
+  <div class="chatbar" id="chatBar">
+    <input id="chatInput" placeholder="הודעה…" autocomplete="off">
+    <button class="btn primary sm" data-ch="send">שלח</button>
   </div>
+</div></div>
+<div id="credit"><div class="sheet" style="height:auto;max-height:92%">
+  <div class="row sp pad" style="border-bottom:1px solid var(--line)"><b id="creditTitle">זיכוי ללקוח</b><button data-cr="close" style="font-size:22px;color:var(--faint)">×</button></div>
+  <div id="creditBody" style="overflow-y:auto;padding:14px 16px 18px"></div>
 </div></div>
 
 <div id="support"><div class="sheet">
@@ -212,7 +237,12 @@ const S = {
   geo:null,
   locChecked:false,
   detectedAddr:null,
-  chatMsgs:[{them:true,t:'היי, יצאתי לדרך 🛵'},{them:false,t:'מעולה, תודה!'}],
+  chatMsgs:[],
+  chats:{},      /* צ'אטים לפי הזמנה: {orderId:{thread:[msgs]}} */
+  chatRead:{},   /* כמה הודעות נקראו לכל הזמנה/שיחה/תפקיד */
+  chatCtx:null,
+  credits:{},    /* זיכויים לפי הזמנה */
+  adminLive:[],
 };
 const STORE = {
   name:'מאפיית לחם ארז', logo:'🥐', tagline:'מאפים טריים כל בוקר',
@@ -642,6 +672,7 @@ function persistLocal(){
       profile:S.profile, addr:S.addr,
       cour:{online:S.cour.online, registered:S.cour.registered, wallet:S.cour.wallet, period:S.cour.period, reg:S.cour.reg},
       biz:{status:S.biz.status, period:S.biz.period},
+      credit:S.priv.credit||0, credits:S.credits, chats:S.chats, chatRead:S.chatRead,
       store:{name:STORE.name, logo:STORE.logo, logoImg:STORE.logoImg||null, tagline:STORE.tagline, cats:STORE.cats}
     };
     localStorage.setItem(LS_KEY, JSON.stringify(snap));
@@ -657,6 +688,7 @@ function hydrateLocal(){
     if(d.addr){ S.addr=Object.assign(S.addr,d.addr); if(S.addr.current){ S.addr.current=null; S.addr.currentGeo=null; S.addr.drop=homeAddr(); S.addr.dropGeo=S.addr.homeGeo||null; } }
     if(d.cour){ const cd=d.cour; if(cd.online!=null)S.cour.online=cd.online; if(cd.registered!=null)S.cour.registered=cd.registered; if(cd.wallet!=null)S.cour.wallet=cd.wallet; if(cd.period)S.cour.period=cd.period; if(cd.reg)S.cour.reg=Object.assign(S.cour.reg,cd.reg); }
     if(d.biz){ if(d.biz.status)S.biz.status=d.biz.status; if(d.biz.period)S.biz.period=d.biz.period; }
+    if(d.credit!=null) S.priv.credit=d.credit; if(d.credits) S.credits=d.credits; if(d.chats) S.chats=d.chats; if(d.chatRead) S.chatRead=d.chatRead;
     if(d.store){ const s=d.store; if(s.name)STORE.name=s.name; if(s.logo)STORE.logo=s.logo; STORE.logoImg=s.logoImg||STORE.logoImg; if(s.tagline!=null)STORE.tagline=s.tagline; if(s.cats)STORE.cats=s.cats;
       BUSINESSES[0].name=STORE.name; BUSINESSES[0].logo=STORE.logo; BUSINESSES[0].logoImg=STORE.logoImg; BUSINESSES[0].cats=STORE.cats; }
   }catch(e){}
@@ -691,11 +723,27 @@ async function apiCall(url,method,body){ /* מחובר לשרת */
 function roleApi(){ return S.role==='private'?'customer':S.role; }
 function advOrder(action,extra){ if(!S.live) return; apiCall('/api/orders/'+S.live.id+'/advance','POST',Object.assign({action:action},extra||{})).then(function(o){ S.live=o; S._liveJson=JSON.stringify(o); render(); }).catch(function(){ var m={approve:1,prep:2,ready:3,accept:4,pickup:6,deliver:7,cancel:3}; if(m[action]!=null)S.live.status=m[action]; if(action==='accept')S.live.courier='שלומי בן דוד'; if(action==='cancel')S.live.courier=null; render(); }); }
 let _syncT=null;
-function startSync(){ stopSync(); _syncT=setInterval(()=>{ syncOrders(); },3000); }
+function startSync(){ stopSync(); _syncT=setInterval(async()=>{
+  await syncOrders();
+  const chatOpenNow=document.getElementById('chat').style.display==='flex';
+  if(chatOpenNow && S.chatCtx){ if(await chatPull(S.chatCtx.oid)) drawChat(); }
+  else if(S.live){ const b=unreadCount(String(S.live.id)); await chatPull(String(S.live.id)); if(unreadCount(String(S.live.id))!==b && !(document.activeElement&&document.activeElement.tagName==='INPUT')) render(); }
+},3000); }
 function stopSync(){ if(_syncT){ clearInterval(_syncT); _syncT=null; } }
 async function syncOrders(){
   if(!S.userId||!S.authed) return;
-  const rp=roleApi(); if(rp==='admin') return;
+  const rp=roleApi();
+  if(rp==='admin'){
+    try{
+      const l=await apiCall('/api/orders?role=admin&userId='+encodeURIComponent(S.userId));
+      const j=JSON.stringify(l);
+      if(j!==S._admJson){ S._admJson=j; S.adminLive=(l||[]).filter(o=>o.status<7).concat((l||[]).filter(o=>o.status>=7).slice(0,5));
+        if(['orders','orderDetail'].includes(S.admin.screen) && !(document.activeElement&&document.activeElement.tagName==='INPUT')) render(); }
+      if(S.admin.screen==='orderDetail' && S.admin.vorder){ if(await chatPull(String(S.admin.vorder))) render(); }
+    }catch(e){}
+    return;
+  }
+  if(rp==='customer'){ try{ const cr=await apiCall('/api/credit?userId='+encodeURIComponent(S.userId)); if(cr && cr.balance!=null && cr.balance!==S.priv.credit){ S.priv.credit=cr.balance; render(); } }catch(e){} }
   try{
     const q=new URLSearchParams({role:rp,userId:S.userId,businessId:S.businessId||''});
     const list=await apiCall('/api/orders?'+q.toString());
@@ -777,6 +825,7 @@ function browseView(){
     </div>
     <div class="scroll" style="padding-top:8px">
       ${active?`<button class="card row" style="width:100%;gap:11px;padding:13px;margin-bottom:12px;border:2px solid var(--green);background:var(--greenSoft);text-align:right" data-act="ptrack"><span style="width:42px;height:42px;border-radius:13px;background:var(--green);display:grid;place-items:center;font-size:21px">🛵</span><div style="flex:1"><b style="font-size:14px;color:#0E7A57">🟢 הזמנה פעילה · ${S.live.bizName}</b><div style="font-size:12px;color:#0E7A57;font-weight:600;margin-top:1px">${statusText(S.live)} · הקש למעקב ›</div></div></button>`:''}
+      ${(p.credit||0)>0?`<div class="card row" style="gap:10px;margin-bottom:12px;background:var(--greenSoft);border-color:var(--green)"><span style="font-size:20px">💸</span><div style="flex:1;font-size:13px;color:#0E7A57"><b>יש לך זיכוי של ${money(p.credit)}</b><br>יקוזז אוטומטית בהזמנה הבאה</div></div>`:''}
       <button class="btn full" style="margin-bottom:14px;padding:17px;font-size:16.5px;font-weight:800;color:#fff;background:linear-gradient(135deg,#FF7A5A,#FF4D79);box-shadow:0 10px 26px rgba(255,77,121,.42);display:flex;align-items:center;justify-content:center;gap:9px" data-act="pfree"><span style="font-size:21px">🛵</span>הזמן שליח לכל מטרה</button>
       <div class="field" style="margin-bottom:14px;background:var(--white);border-radius:13px;padding:12px 13px"><span>🔎</span><input data-inp="q" value="${p.q}" placeholder="חפש עסק, מוצר או קטגוריה..."></div>
       ${q?'':`<div class="sect">קטגוריות</div>
@@ -875,10 +924,10 @@ function statusText(L){
 function orderStatusView(){
   const L=S.live; if(!L) return browseView();
   const done=L.status>=7;
-  const courierCard = (L.status>=4&&!done&&L.courier)?`<div class="card row" style="gap:12px;margin-bottom:14px"><span class="avatar">🛵</span><div style="flex:1"><div style="font-weight:700">${L.courier}</div><div class="muted" style="font-size:13px">⭐ 4.9 · בדרך אליך</div></div><button class="ico" style="background:var(--brandSoft)" data-act="chatOpen">💬</button><button class="ico" style="background:var(--green);color:#fff" data-act="call">📞</button></div>`:'';
+  const courierCard = (L.status>=4&&!done&&L.courier)?`<div class="card row" style="gap:12px;margin-bottom:14px"><span class="avatar">🛵</span><div style="flex:1"><div style="font-weight:700">${L.courier}</div><div class="muted" style="font-size:13px">⭐ 4.9 · בדרך אליך</div></div>${chatIconBtn(L.id)}<button class="ico" style="background:var(--green);color:#fff" data-act="call">📞</button></div>`:'';
   const mapBlock = (L.status>=4&&!done)?mapEmbed(190):'';
   const foot = done?`<div style="margin-top:16px"><button class="btn primary full" data-act="prate">דרגו את השליח</button><button class="btn ghost full" style="margin-top:6px" data-act="pdone">סיום</button></div>`:'<div class="faint" style="text-align:center;font-size:12px;margin-top:14px">הסטטוס מתעדכן כשהשליח פועל באפליקציה שלו.</div>';
-  const head=`<div class="pad row" style="gap:8px;padding-bottom:6px"><button class="ico" style="width:38px;height:38px;background:var(--white);border:1px solid var(--line)" data-act="phome">${BACK}</button><div class="h2" style="flex:1">מעקב הזמנה</div></div>`;
+  const head=`<div class="pad row" style="gap:8px;padding-bottom:6px"><button class="ico" style="width:38px;height:38px;background:var(--white);border:1px solid var(--line)" data-act="phome">${BACK}</button><div class="h2" style="flex:1">מעקב הזמנה</div>${chatIconBtn(L.id,'width:42px;height:42px;background:var(--brandSoft)')}</div>`;
   if(L.type==='free'){
     const steps=[['מחפש שליח',3],['שליח בדרך לאיסוף',4],['נאספה · בדרך אליך',5],['נמסרה',7]];
     return `${head}<div class="scroll">
@@ -1155,7 +1204,7 @@ function courierView(){
       <div class="h2" style="margin-bottom:12px">בדרך לאיסוף</div>
       ${routeMiniLive(L)}
       ${mapEmbed()}
-      <div class="row" style="margin-bottom:8px"><button class="btn outline" style="flex:1" data-act="call">📞 שיחה</button><button class="btn soft" style="flex:1" data-act="nav" data-v="${L.pickup||''}">🧭 ניווט</button></div>
+      <div class="row" style="margin-bottom:8px;gap:8px"><button class="btn outline chatbtn" style="flex:1" data-act="chatOpen" data-v="${L.id}">💬 צ'אט${badge(unreadCount(String(L.id)))}</button><button class="btn outline" style="flex:1" data-act="call">📞 שיחה</button><button class="btn soft" style="flex:1" data-act="nav" data-v="${L.pickup||''}">🧭 ניווט</button></div>
       ${geoGate(L,'pickup')}
       <button class="btn danger full" style="margin-top:8px" data-act="ccancel">⚠️ לא יכול להמשיך (תקלה)</button>
     </div>`;
@@ -1163,7 +1212,7 @@ function courierView(){
       <div class="h2" style="margin-bottom:12px">בדרך ללקוח</div>
       ${routeMiniLive(L,true)}
       ${mapEmbed()}
-      <div class="row" style="margin-bottom:8px"><button class="btn outline" style="flex:1" data-act="call">📞 שיחה</button><button class="btn soft" style="flex:1" data-act="nav" data-v="${L.drop||''}">🧭 ניווט</button></div>
+      <div class="row" style="margin-bottom:8px;gap:8px"><button class="btn outline chatbtn" style="flex:1" data-act="chatOpen" data-v="${L.id}">💬 צ'אט${badge(unreadCount(String(L.id)))}</button><button class="btn outline" style="flex:1" data-act="call">📞 שיחה</button><button class="btn soft" style="flex:1" data-act="nav" data-v="${L.drop||''}">🧭 ניווט</button></div>
       ${geoGate(L,'drop')}
       <button class="btn danger full" style="margin-top:8px" data-act="ccancel">⚠️ לא יכול להמשיך (תקלה)</button>
     </div>`;
@@ -1192,7 +1241,7 @@ function courierView(){
 function cashToCollect(L){
   if(L.pay!=='cash') return `<div class="faint" style="font-size:11.5px;margin-top:4px">💳 שולם באשראי · אין מה לגבות מהלקוח</div>`;
   const goods=(L.items||[]).reduce((s,it)=>s+(it.p||0)*(it.q||1),0);
-  const toCollect=(L.collect!=null)?L.collect:goods+(L.fee||0);
+  const toCollect=(L.collect!=null)?L.collect:Math.max(0,Math.round((goods+(L.fee||0)-(L.creditUsed||0))*10)/10);
   return `<div class="row sp" style="margin-top:6px;padding:8px 11px;background:var(--greenSoft);border-radius:10px"><span style="font-size:12.5px;font-weight:700;color:#0E7A57">💵 לגבות מהלקוח במזומן</span><b style="color:#0E7A57">${money(toCollect)}</b></div>`;
 }
 function routeMiniLive(L,picked){
@@ -1436,7 +1485,7 @@ function bizOrders(){
       <div class="faint" style="font-size:12px;margin-bottom:6px">${OSTATUS[st]} · תשלום ${L.pay==='card'?'אשראי':'מזומן'}</div>
       <div class="muted" style="font-size:13px;margin-bottom:10px">${L.items.map(it=>`${it.q}× ${it.n}`).join(' · ')}</div>
       ${action}
-      ${st>=4&&st<7&&L.courier?`<button class="btn soft full" style="margin-top:10px" data-act="bizChat">💬 צ'אט עם ${L.courier}</button>`:''}
+      <button class="btn soft full chatbtn" style="margin-top:10px" data-act="chatOpen" data-v="${L.id}">💬 צ'אט על ההזמנה${st>=4&&st<7&&L.courier?' · עם השליח ':''}${badge(unreadCount(String(L.id)))}</button>
     </div>`;
   } else {
     card=emptyView('🧾','אין הזמנות פעילות','הזמנות מהחנות יופיעו כאן. הזמינו כלקוח כדי לראות הזמנה נכנסת.');
@@ -1693,11 +1742,11 @@ function adminBizDetail(){
 }
 function adminOrderRows(list){
   if(!list.length) return '<div class="empty"><div class="bubble">🔍</div><div style="font-weight:700;color:var(--ink)">לא נמצאו הזמנות</div><div style="margin-top:6px">נסו מספר הזמנה, שם לקוח או עסק.</div></div>';
-  return list.map(o=>`<button class="card row" style="width:100%;gap:12px;margin-bottom:8px;text-align:right" data-act="adOrder" data-v="${o.id}"><div style="flex:1"><div class="row sp"><b style="font-size:14px">הזמנה #${o.id}</b><span class="pill" style="font-size:11px;background:${stColor(o.status)}1a;color:${stColor(o.status)}">${o.status}</span></div><div class="faint" style="font-size:12.5px;margin-top:4px">${o.cust} · ${o.biz}</div></div><b>${money(o.goods+o.fee)}</b></button>`).join('');
+  return list.map(o=>`<button class="card row" style="width:100%;gap:12px;margin-bottom:8px;text-align:right" data-act="adOrder" data-v="${o.id}"><div style="flex:1"><div class="row sp"><b style="font-size:14px">${o.live?'<span style="color:var(--green)">● </span>':''}הזמנה #${o.id}${unreadCount(o.id,'admin')?' 💬'+unreadCount(o.id,'admin'):''}</b><span class="pill" style="font-size:11px;background:${stColor(o.status)}1a;color:${stColor(o.status)}">${o.status}</span></div><div class="faint" style="font-size:12.5px;margin-top:4px">${o.cust} · ${o.biz}</div></div><b>${money(o.goods+o.fee)}</b></button>`).join('');
 }
 function adminOrders(){
   const q=(S.admin.q||'').trim();
-  const list=ADMIN_ORDERS.filter(o=>!q||[o.id,o.cust,o.biz,o.courier,o.status].some(f=>f.indexOf(q)>-1));
+  const list=allAdminOrders().filter(o=>!q||[o.id,o.cust,o.biz,o.courier,o.status].some(f=>String(f).indexOf(q)>-1));
   return topbar()+`<main style="flex:1;display:flex;flex-direction:column;overflow:hidden">${statusbar}
     <div class="pad row" style="gap:8px;padding-bottom:6px"><button class="ico" style="width:38px;height:38px;background:var(--white);border:1px solid var(--line)" data-act="adBack">${BACK}</button><div class="h2" style="flex:1">כל ההזמנות</div></div>
     <div style="padding:0 16px 10px"><div class="field" style="background:var(--white)"><span>🔍</span><input data-inp="adq" value="${S.admin.q||''}" placeholder="מספר הזמנה, שם לקוח, עסק או סטטוס"></div></div>
@@ -1705,7 +1754,8 @@ function adminOrders(){
   </main>`;
 }
 function adminOrderDetail(){
-  const o=ADMIN_ORDERS.find(x=>x.id===S.admin.vorder); if(!o) { S.admin.screen='orders'; return adminOrders(); }
+  const o=allAdminOrders().find(x=>x.id===String(S.admin.vorder)); if(!o) { S.admin.screen='orders'; return adminOrders(); }
+  const pp=partiesOf(o.raw||o), oc=S.credits[o.id]||[], ur=k=>badge(unreadIn(o.id,k,'admin'));
   const sp=split(o.src,o.goods,o.fee), commission=sp.plat, total=o.goods+o.fee, canceled=o.status==='בוטלה';
   const rowD=(l,v)=>`<div class="row sp" style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="muted" style="font-size:13px">${l}</span><span style="font-weight:600;font-size:14px">${v}</span></div>`;
   return topbar()+`<main style="flex:1;display:flex;flex-direction:column;overflow:hidden">${statusbar}
@@ -1719,9 +1769,25 @@ function adminOrderDetail(){
       <div class="card" style="margin-bottom:12px;padding:6px 14px">
         ${rowD('סחורה',money(o.goods))}${rowD('דמי משלוח (לשליח)',money(o.fee))}${rowD('מקור ההזמנה',SRC_NAME[o.src||'app'])}${rowD('עמלת פלטפורמה ('+sp.label+')',money(commission))}${rowD('לעסק',money(sp.biz))}${rowD('לשליח (נטו)',money(sp.cour))}<div class="row sp" style="padding:8px 0"><b>סה״כ ללקוח</b><b>${money(total)}</b></div>
       </div>
+      <div class="sect">טיפול בהזמנה</div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="lbl" style="margin-bottom:8px">💬 צ'אט עם המעורבים</div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          ${pp.hasCust?`<button class="btn soft sm chatbtn" style="flex:1" data-act="adChat" data-v="${o.id}|adm-cust">👤 לקוח${ur('adm-cust')}</button>`:''}
+          <button class="btn soft sm chatbtn" style="flex:1" data-act="adChat" data-v="${o.id}|adm-cour">🛵 שליח${ur('adm-cour')}</button>
+          ${pp.hasBiz?`<button class="btn soft sm chatbtn" style="flex:1" data-act="adChat" data-v="${o.id}|adm-biz">🏪 עסק${ur('adm-biz')}</button>`:''}
+        </div>
+        <button class="btn ghost sm full" style="margin-bottom:12px" data-act="adChat" data-v="${o.id}|watch">👁 צפייה בכל השיחות של ההזמנה</button>
+        <div class="lbl" style="margin-bottom:8px">⚡ פעולות מהירות</div>
+        <div class="row" style="gap:8px;margin-bottom:8px">
+          <button class="btn outline sm" style="flex:1" data-act="adDelay" data-v="${o.id}">⏱ דיווח עיכוב</button>
+          <button class="btn outline sm" style="flex:1" data-act="adReassign" data-v="${o.id}">🔁 העבר לשליח אחר</button>
+        </div>
+        <button class="btn primary full" data-act="adCredit" data-v="${o.id}">💸 זיכוי מהיר ללקוח</button>
+        ${oc.length?`<div style="margin-top:10px;font-size:12.5px">${oc.map(c=>`<div class="row sp" style="padding:6px 0;border-top:1px solid var(--line)"><span class="muted">זיכוי · ${c.reason} · על חשבון ${c.fault==='courier'?'השליח':c.fault==='business'?'העסק':'שליח +'}</span><b style="color:var(--green)">${money(c.amt)}</b></div>`).join('')}</div>`:''}
+      </div>
       <div class="sect">פעולות ניהול</div>
       ${canceled?'<div class="card muted" style="font-size:13px">ההזמנה בוטלה. הלקוח זוכה.</div>':`<button class="btn danger full" style="margin-bottom:8px" data-act="adCancel" data-v="${o.id}">ביטול וזיכוי ללקוח</button>`}
-      <button class="btn soft full" data-act="support">💬 פנייה לנציג / מחלוקת</button>
     </div>
   </main>`;
 }
@@ -1880,9 +1946,9 @@ app.addEventListener('click', e=>{
     case 'ptype': S.priv.type=v; render(); break;
     case 'psize': S.priv.size=v; if(S.priv.price<minPrice()) S.priv.price=minPrice(); render(); break;
     case 'ppay': S.priv.pay=v; render(); break;
-    case 'psubmit': (async()=>{ var pl={type:'free',src:'any',customerId:S.userId,bizName:'משלוח לכל מטרה',pickupName:((S.priv.type==='to_me'&&(S.priv.pickMode||'biz')==='biz')?(S.addr.pickupName||null):null),pickup:S.addr.pickup,address:S.addr.drop,addressGeo:S.addr.dropGeo||null,pickupGeo:S.addr.pickupGeo||null,fee:S.priv.price,pay:S.priv.pay,desc:(S.priv.descX||''),buys:!!S.priv.courierBuys,surcharge:(S.priv.courierBuys?BUY_SURCHARGE:0)}; var o; try{ o=await apiCall('/api/orders','POST',pl); }catch(e){ o=Object.assign({id:'L'+Date.now(),status:3,courier:null,items:[]},pl); } S.live=o; S._liveJson=JSON.stringify(o); S.priv.stage='ostatus'; toast('ההזמנה הועלתה לשליחים'); render(); })(); break;
+    case 'psubmit': (async()=>{ var _cu=useCredit(S.priv.price); if(_cu){ S.priv.credit=Math.round((S.priv.credit-_cu)*10)/10; setTimeout(()=>toast('קוזז זיכוי של '+money(_cu)+' מהתשלום'),1200); } var pl={type:'free',src:'any',creditUsed:_cu,custName:(S.profile&&S.profile.name)||'לקוח',customerId:S.userId,bizName:'משלוח לכל מטרה',pickupName:((S.priv.type==='to_me'&&(S.priv.pickMode||'biz')==='biz')?(S.addr.pickupName||null):null),pickup:S.addr.pickup,address:S.addr.drop,addressGeo:S.addr.dropGeo||null,pickupGeo:S.addr.pickupGeo||null,fee:S.priv.price,pay:S.priv.pay,desc:(S.priv.descX||''),buys:!!S.priv.courierBuys,surcharge:(S.priv.courierBuys?BUY_SURCHARGE:0)}; var o; try{ o=await apiCall('/api/orders','POST',pl); }catch(e){ o=Object.assign({id:'L'+Date.now(),status:3,courier:null,items:[]},pl); } S.live=o; S._liveJson=JSON.stringify(o); S.priv.stage='ostatus'; toast('ההזמנה הועלתה לשליחים'); render(); })(); break;
     case 'pnew': S.priv.stage='browse'; render(); break;
-    case 'chatOpen': openChat(); break;
+    case 'chatOpen': openChat(v||(S.live&&S.live.id)); break;
     case 'pfree': S.priv.stage='free'; S.priv.fstep=1; render(); break;
     case 'ftype': S.priv.type=v; S.priv.fstep=2; render(); break;
     case 'fsize': S.priv.size=v; S.priv.fstep=5; if(S.priv.price<minPrice()) S.priv.price=minPrice(); render(); break;
@@ -1956,12 +2022,16 @@ app.addEventListener('click', e=>{
     case 'editCat': openEdit({type:'category',mode:'edit',ci:+v,name:STORE.cats[+v].name}); break;
     case 'delCat': STORE.cats.splice(+v,1); persistLocal(); pushStore(); toast('הקטגוריה נמחקה'); render(); break;
     case 'editStore': openEdit({type:'store',name:STORE.name,logo:STORE.logo,tagline:STORE.tagline,img:STORE.logoImg}); break;
-    case 'bizChat': openChat(); break;
+    case 'bizChat': openChat(S.live&&S.live.id,'biz-cour'); break;
     case 'soon': toast('בקרוב'); break;
     case 'bapprove': advOrder('approve'); break;
     case 'bprep': advOrder('prep',{prep:+v}); break;
     case 'bready': advOrder('ready'); toast('בון הופק · ההזמנה הוצעה לשליחים'); break;
-    case 'caccept': advOrder('accept',{actorId:S.userId,actorName:'שלומי בן דוד'}); break;
+    case 'caccept': if(S.live){ const _id=S.live.id; chatSend(_id,'cust-cour','🛵 השליח קיבל את ההזמנה והצטרף לשיחה',{sys:true,from:'courier'}); if(S.live.type==='store') chatSend(_id,'biz-cour','🛵 השליח קיבל את ההזמנה ובדרך לאיסוף',{sys:true,from:'courier'}); } advOrder('accept',{actorId:S.userId,actorName:'שלומי בן דוד'}); break;
+    case 'adChat': openChat(v.split('|')[0],v.split('|')[1]); break;
+    case 'adCredit': openCredit(v); break;
+    case 'adDelay': { const o=findOrderById(v), p=partiesOf(o); if(p.hasCust) chatSend(v,'adm-cust','שלום, ראינו שיש עיכוב בהזמנה שלך 🙏 אנחנו בודקים מול השליח ונעדכן אותך בהקדם.',{from:'admin'}); if(p.hasCour) chatSend(v,'adm-cour','היי, יש עיכוב בהזמנה #'+v+'. מה מצב ההגעה? עדכן אותנו בבקשה 🙏',{from:'admin'}); else if(p.hasBiz) chatSend(v,'adm-biz','היי, יש עיכוב בהזמנה #'+v+'. מתי היא תהיה מוכנה?',{from:'admin'}); toast('נשלחה הודעת עיכוב'+(p.hasCust?' ללקוח':'')+(p.hasCour?' ולשליח':(p.hasBiz?' ולעסק':''))); render(); break; }
+    case 'adReassign': { if(S.live && String(S.live.id)===v){ chatSend(v,'adm-cust','אנחנו מעבירים את ההזמנה שלך לשליח אחר כדי שתגיע מהר יותר 🛵',{from:'admin'}); if(S.live.courier) chatSend(v,'adm-cour','ההזמנה #'+v+' הועברה לשליח אחר.',{from:'admin'}); S._adminAct=true; advOrder('cancel'); toast('ההזמנה חזרה לשליחים'); } else toast('הזמנה לדוגמה — פעולה זמינה בהזמנות פעילות'); break; }
     case 'cdecline': toast('דחית — ההזמנה תוצע לשליח אחר'); break;
     case 'cpicked': advOrder('pickup'); break;
     case 'cdeliver': if(S.live){ const _e=courierEarn(S.live); S.cour.wallet=Math.round((S.cour.wallet+_e)*10)/10; toast('נוספו לארנק '+money(_e)); } advOrder('deliver'); break;
@@ -2038,17 +2108,195 @@ app.addEventListener('input', e=>{
   }
 });
 
-/* chat overlay (outside #app so it doesn't reset tracking) */
+/* ================= צ'אט לכל הזמנה =================
+   שיחות לפי מי שמעורב בהזמנה:
+   cust-cour לקוח↔שליח · cust-biz לקוח↔עסק · biz-cour עסק↔שליח
+   adm-cust / adm-cour / adm-biz  מוקד (מנהל) מול כל צד */
+const ROLE_NAME={customer:'הלקוח',courier:'השליח',business:'העסק',admin:'מוקד שליח +'};
+const THREAD_ROLES={'cust-cour':['customer','courier'],'cust-biz':['customer','business'],'biz-cour':['business','courier'],'adm-cust':['admin','customer'],'adm-cour':['admin','courier'],'adm-biz':['admin','business']};
+function myRole(){ return S.role==='private'?'customer':S.role; }
+function liveToAdmin(L){
+  const goods=(L.items||[]).reduce((a,it)=>a+(it.p||0)*(it.q||1),0);
+  return {id:String(L.id), live:true, raw:L, type:L.type, src:L.src||(L.type==='free'?'any':'app'),
+    cust:L.custName||'לקוח', biz:L.pickupName||(L.type==='store'?L.bizName:'משלוח לכל מטרה'), courier:L.courier||'טרם שובץ',
+    status:L.status>=7?'נמסרה':(OSTATUS[L.status]||'פעילה'), stNum:L.status, pay:L.pay==='cash'?'מזומן':'אשראי', goods:goods, fee:L.fee||0};
+}
+function adminLiveList(){ const a=(S.adminLive&&S.adminLive.length)?S.adminLive:(S.live?[S.live]:[]); return a.map(liveToAdmin); }
+function allAdminOrders(){ const live=adminLiveList(); return live.concat(ADMIN_ORDERS.filter(o=>!live.some(l=>l.id===o.id))); }
+function findOrderById(id){
+  id=String(id);
+  if(S.live && String(S.live.id)===id) return S.live;
+  const a=allAdminOrders().find(o=>o.id===id); return a?(a.raw||a):null;
+}
+function partiesOf(o){
+  const demo = !o.type && o.cust!=null;
+  const type = o.type || (o.biz?'store':'free');
+  const src = o.src || (type==='free'?'any':'app');
+  const hasBiz = type==='store';
+  const hasCust = demo || type==='free' || src!=='biz';
+  const cn = o.courier && o.courier!=='טרם שובץ' ? o.courier : null;
+  const hasCour = !!cn && (typeof o.status!=='number' || o.status>=4);
+  return {hasBiz, hasCust, hasCour, bizName:o.pickupName||o.bizName||o.biz||'העסק', courName:cn||'השליח'};
+}
+function threadsFor(o,role){
+  const p=partiesOf(o), T=(key,title,ok,note)=>({key,title,ok,note});
+  const wait='הצ׳אט עם השליח ייפתח ברגע שהשליח יקבל את ההזמנה';
+  let a=[];
+  if(role==='customer') a=[T('cust-cour','🛵 השליח',p.hasCour,wait), p.hasBiz&&T('cust-biz','🏪 '+p.bizName,true), T('adm-cust','🎧 מוקד שליח +',true)];
+  else if(role==='courier') a=[p.hasCust&&T('cust-cour','👤 הלקוח',true), p.hasBiz&&T('biz-cour','🏪 '+p.bizName,true), T('adm-cour','🎧 מוקד',true)];
+  else if(role==='business') a=[T('biz-cour','🛵 השליח',p.hasCour,wait), p.hasCust&&T('cust-biz','👤 הלקוח',true), T('adm-biz','🎧 מוקד',true)];
+  else if(role==='admin') a=[p.hasCust&&T('adm-cust','👤 לקוח',true), T('adm-cour','🛵 שליח',p.hasCour,'עוד לא שובץ שליח להזמנה'), p.hasBiz&&T('adm-biz','🏪 עסק',true), T('watch','👁 כל השיחות',true)];
+  return a.filter(Boolean);
+}
+function thrMsgs(oid,key){ const c=S.chats[oid]||{}; return c[key]||[]; }
+function unreadIn(oid,key,role){ const arr=thrMsgs(oid,key), r=S.chatRead[oid+'|'+key+'|'+role]||0; return arr.slice(r).filter(m=>m.from!==role&&!m.sys).length; }
+function unreadCount(oid,role){
+  role=role||myRole(); if(oid==null) return 0; const o=findOrderById(oid); if(!o) return 0;
+  return threadsFor(o,role).filter(t=>t.key!=='watch').reduce((n,t)=>n+unreadIn(String(oid),t.key,role),0);
+}
+function badge(n){ return n?`<span class="cbadge">${n}</span>`:''; }
+function chatIconBtn(oid,style){ if(oid==null) return ''; return `<button class="ico chatbtn" style="${style||'background:var(--brandSoft)'}" data-act="chatOpen" data-v="${oid}">💬${badge(unreadCount(String(oid)))}</button>`; }
+function chatSend(oid,key,text,opt){
+  opt=opt||{}; oid=String(oid);
+  const m={from:opt.from||myRole(), text:text, ts:Date.now()}; if(opt.sys) m.sys=true;
+  S.chats[oid]=S.chats[oid]||{}; (S.chats[oid][key]=S.chats[oid][key]||[]).push(m);
+  if(m.from===myRole()) S.chatRead[oid+'|'+key+'|'+m.from]=S.chats[oid][key].length;
+  try{ apiCall('/api/orders/'+encodeURIComponent(oid)+'/chat','POST',{thread:key,from:m.from,text:text,sys:!!m.sys}).catch(()=>{}); }catch(e){}
+  persistSoon();
+}
+async function chatPull(oid){
+  if(oid==null) return false;
+  try{
+    const d=await apiCall('/api/orders/'+encodeURIComponent(oid)+'/chat?role='+myRole());
+    if(d && d.threads){ const before=JSON.stringify(S.chats[oid]||{}); S.chats[oid]=Object.assign({},S.chats[oid]||{},d.threads); return before!==JSON.stringify(S.chats[oid]); }
+  }catch(e){}
+  return false;
+}
+const QUICK={
+  customer:{'cust-cour':['אני בבית 🏠','תתקשר כשאתה למטה','קוד כניסה לבניין: ','קומה ודירה: '],'cust-biz':['אפשר בלי בצל?','מתי זה יהיה מוכן?','תודה רבה!'],'adm-cust':['השליח מתעכב','חסר פריט בהזמנה','המשלוח הגיע פגום','לא קיבלתי את ההזמנה']},
+  courier:{'cust-cour':['אני בדרך 🛵','הגעתי, אני למטה','לא מוצא את הכתובת','יש עיכוב קטן, עוד כמה דקות'],'biz-cour':['אני בדרך לאיסוף','הגעתי לאיסוף','ההזמנה עוד לא מוכנה?'],'adm-cour':['יש עיכוב בדרך','הלקוח לא עונה','הכתובת לא נכונה','יש בעיה בהזמנה']},
+  business:{'biz-cour':['ההזמנה מוכנה ✅','עוד 5 דקות','תיכנס מהכניסה האחורית'],'cust-biz':['ההזמנה בהכנה','חסר לנו מוצר — אפשר תחליף?','תודה שהזמנת!'],'adm-biz':['השליח לא הגיע','יש בעיה בהזמנה','צריך לבטל הזמנה']},
+  admin:{'adm-cust':['שלום, כאן מוקד שליח + 👋 איך אפשר לעזור?','מצטערים על העיכוב 🙏 אנחנו בודקים מול השליח','השליח בדרך אליך ויגיע בדקות הקרובות','טיפלנו בבעיה וזיכינו אותך'],'adm-cour':['מה מצב ההגעה? יש עיכוב בהזמנה','הלקוח ממתין, עדכן בבקשה','תתקשר ללקוח דרך האפליקציה','אנחנו מעבירים את ההזמנה לשליח אחר'],'adm-biz':['מתי ההזמנה תהיה מוכנה?','הלקוח מדווח על פריט חסר','השליח בדרך אליכם']}
+};
 const chat=document.getElementById('chat');
-function drawChat(){ document.getElementById('chatMsgs').innerHTML = S.chatMsgs.map(m=>`<div class="msg ${m.them?'them':'me'}">${m.t}</div>`).join(''); }
-function openChat(){ drawChat(); chat.style.display='flex'; }
+function fmtT(ts){ const d=new Date(ts||Date.now()); return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'); }
+function drawChat(){
+  const c=S.chatCtx; if(!c) return;
+  const o=findOrderById(c.oid); if(!o){ chat.style.display='none'; return; }
+  const role=myRole(), ths=threadsFor(o,role);
+  let t=ths.find(x=>x.key===c.thread); if(!t){ t=ths.find(x=>x.ok)||ths[0]; c.thread=t.key; }
+  document.getElementById('chatTitle').textContent="צ'אט · הזמנה #"+c.oid;
+  document.getElementById('chatTabs').innerHTML=ths.map(x=>`<button class="ctab ${x.key===t.key?'on':''} ${x.ok?'':'off'}" data-ch="tab" data-v="${x.key}">${x.title}${x.key!=='watch'?badge(unreadIn(String(c.oid),x.key,role)):''}</button>`).join('');
+  let msgs, readonly=false;
+  if(t.key==='watch'){
+    readonly=true;
+    msgs=['cust-cour','cust-biz','biz-cour','adm-cust','adm-cour','adm-biz'].flatMap(k=>thrMsgs(String(c.oid),k).map(m=>Object.assign({k:k},m))).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  } else msgs=thrMsgs(String(c.oid),t.key);
+  const box=document.getElementById('chatMsgs');
+  if(!t.ok){ box.innerHTML=`<div class="msg sys">⏳ ${t.note}</div>`; readonly=true; }
+  else {
+    const intro=`<div class="msg sys">💬 שיחה על הזמנה #${c.oid}${t.key==='watch'?' · צפייה בכל השיחות של ההזמנה':''}<br>🔒 בלי מספרי טלפון ופרטים אישיים</div>`;
+    const tag={'cust-cour':'לקוח↔שליח','cust-biz':'לקוח↔עסק','biz-cour':'עסק↔שליח','adm-cust':'מוקד↔לקוח','adm-cour':'מוקד↔שליח','adm-biz':'מוקד↔עסק'};
+    box.innerHTML=intro+(msgs.length?msgs.map(m=>{
+      if(m.sys) return `<div class="msg sys">${m.text}</div>`;
+      const mine=m.from===role&&t.key!=='watch';
+      const who=mine?'':`<span class="who">${ROLE_NAME[m.from]||''}${m.k?' · '+tag[m.k]:''}</span>`;
+      return `<div class="msg ${mine?'me':'them'} ${m.from==='admin'&&!mine?'adm':''}">${who}${m.text}<span class="tm">${fmtT(m.ts)}</span></div>`;
+    }).join(''):`<div class="msg sys">עוד אין הודעות. כתבו הודעה ראשונה 👇</div>`);
+  }
+  const q=(QUICK[role]&&QUICK[role][t.key])||[];
+  document.getElementById('chatQr').innerHTML=readonly?'':q.map(x=>`<button class="qr" data-ch="qr" data-v="${x.replace(/"/g,'&quot;')}">${x}</button>`).join('');
+  document.getElementById('chatBar').style.display=readonly?'none':'flex';
+  document.getElementById('chatQr').style.display=readonly||!q.length?'none':'flex';
+  if(t.ok && t.key!=='watch') S.chatRead[c.oid+'|'+t.key+'|'+role]=thrMsgs(String(c.oid),t.key).length;
+  box.scrollTop=box.scrollHeight;
+}
+function openChat(oid,thread){
+  if(oid==null) oid=S.live&&S.live.id; if(oid==null){ toast('אין הזמנה פעילה'); return; }
+  S.chatCtx={oid:String(oid),thread:thread||null};
+  drawChat(); chat.style.display='flex';
+  chatPull(String(oid)).then(ch=>{ if(ch && chat.style.display==='flex') drawChat(); });
+}
+function closeChat(){ chat.style.display='none'; S.chatCtx=null; render(); }
+function sendFromInput(){
+  const i=document.getElementById('chatInput'), v=i.value.trim(), c=S.chatCtx; if(!v||!c) return;
+  chatSend(c.oid,c.thread,v); i.value=''; drawChat();
+}
 chat.addEventListener('click', e=>{
-  if(e.target===chat){ chat.style.display='none'; return; }
-  const el=e.target.closest('[data-act]'); if(!el) return;
-  if(el.dataset.act==='chatClose') chat.style.display='none';
-  if(el.dataset.act==='chatSend'){ const i=document.getElementById('chatInput'); if(i.value.trim()){ S.chatMsgs.push({them:false,t:i.value.trim()}); i.value=''; drawChat(); const m=document.getElementById('chatMsgs'); m.scrollTop=m.scrollHeight; } }
+  if(e.target===chat){ closeChat(); return; }
+  const el=e.target.closest('[data-ch]'); if(!el) return;
+  const a=el.dataset.ch;
+  if(a==='close') closeChat();
+  if(a==='send') sendFromInput();
+  if(a==='tab'){ S.chatCtx.thread=el.dataset.v; drawChat(); }
+  if(a==='qr'){ const v=el.dataset.v; const i=document.getElementById('chatInput'); if(/: $/.test(v)){ i.value=v; i.focus(); } else { chatSend(S.chatCtx.oid,S.chatCtx.thread,v); drawChat(); } }
 });
-document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); document.querySelector('[data-act="chatSend"]').click(); } });
+document.getElementById('chatInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendFromInput(); } });
+
+/* ================= זיכוי מהיר (מנהל) ================= */
+const creditEl=document.getElementById('credit');
+const CR_REASONS=[['delay','⏱ עיכוב במשלוח'],['missing','📦 פריט חסר / פגום'],['noshow','🚫 המשלוח לא הגיע'],['service','😕 שירות לא תקין'],['other','❓ אחר']];
+const CR_FAULT=[['platform','שליח + (על חשבוננו)'],['courier','השליח'],['business','העסק']];
+function openCredit(oid){
+  const o=findOrderById(oid); if(!o) return;
+  const a=liveToAdminSafe(o);
+  S.creditCtx={oid:String(oid), preset:'fee', amt:a.fee, custom:'', reason:'delay', fault:'platform', goods:a.goods, fee:a.fee};
+  drawCredit(); creditEl.style.display='flex';
+}
+function liveToAdminSafe(o){ return o.cust!=null&&!o.type ? o : liveToAdmin(o); }
+function crAmount(c){
+  if(c.preset==='fee') return c.fee; if(c.preset==='half') return Math.round(c.fee*0.5*10)/10;
+  if(c.preset==='ten') return Math.round((c.goods+c.fee)*0.10*10)/10; if(c.preset==='all') return c.goods+c.fee;
+  return Math.max(0,parseFloat(c.custom)||0);
+}
+function drawCredit(){
+  const c=S.creditCtx; if(!c) return; c.amt=crAmount(c);
+  const op=(k,l,v)=>`<button class="crop ${c.preset===k?'on':''}" data-cr="preset" data-v="${k}"><span>${l}</span><b>${v}</b></button>`;
+  const prev=(S.credits[c.oid]||[]);
+  document.getElementById('creditTitle').textContent='זיכוי ללקוח · הזמנה #'+c.oid;
+  document.getElementById('creditBody').innerHTML=`
+    ${prev.length?`<div class="card" style="margin-bottom:12px;background:var(--brandSoft);border-color:var(--brand);font-size:12.5px">כבר זוכה בהזמנה זו: <b>${money(prev.reduce((a,x)=>a+x.amt,0))}</b></div>`:''}
+    <div class="lbl" style="margin-bottom:8px">כמה לזכות?</div>
+    ${op('fee','דמי המשלוח',money(c.fee))}
+    ${op('half','חצי מדמי המשלוח',money(Math.round(c.fee*0.5*10)/10))}
+    ${c.goods?op('ten','10% מההזמנה',money(Math.round((c.goods+c.fee)*0.10*10)/10)):''}
+    ${op('all','כל ההזמנה',money(c.goods+c.fee))}
+    <button class="crop ${c.preset==='custom'?'on':''}" data-cr="preset" data-v="custom"><span>סכום אחר</span><span style="display:flex;align-items:center;gap:4px">₪<input id="crCustom" type="number" inputmode="decimal" value="${c.custom}" placeholder="0" style="width:70px;border:1px solid var(--line);border-radius:8px;padding:5px;text-align:center;font-size:14px"></span></button>
+    <div class="lbl" style="margin:8px 0">סיבה</div>
+    <div class="crchips">${CR_REASONS.map(r=>`<button class="crchip ${c.reason===r[0]?'on':''}" data-cr="reason" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+    <div class="lbl" style="margin-bottom:8px">מי אחראי? (על חשבון מי הזיכוי)</div>
+    <div class="crchips">${CR_FAULT.map(r=>`<button class="crchip ${c.fault===r[0]?'on':''}" data-cr="fault" data-v="${r[0]}">${r[1]}</button>`).join('')}</div>
+    <div class="faint" style="font-size:12px;margin-bottom:12px">הזיכוי יירשם ללקוח ויקוזז אוטומטית בהזמנה הבאה. הלקוח יקבל הודעה בצ'אט עם המוקד.${c.fault!=='platform'?' הסכום יירשם כחיוב ל'+(c.fault==='courier'?'שליח':'עסק')+' בהתחשבנות הבאה.':''}</div>
+    <button class="btn primary full" data-cr="go">💸 זכה ${money(c.amt)}</button>`;
+}
+function doCredit(){
+  const c=S.creditCtx; c.amt=crAmount(c); const amt=Math.round(c.amt*10)/10;
+  if(!(amt>0)){ toast('בחרו סכום לזיכוי'); return; }
+  const reason=(CR_REASONS.find(r=>r[0]===c.reason)||['','אחר'])[1].replace(/^\S+\s/,'');
+  S.credits[c.oid]=(S.credits[c.oid]||[]).concat([{amt:amt,reason:reason,fault:c.fault,ts:Date.now()}]);
+  S.priv.credit=Math.round(((S.priv.credit||0)+amt)*10)/10;
+  if(c.fault==='courier') S.cour.wallet=Math.round((S.cour.wallet-amt)*10)/10;
+  if(c.fault==='business') S.bizCharges=Math.round(((S.bizCharges||0)+amt)*10)/10;
+  const o=findOrderById(c.oid), p=partiesOf(o);
+  chatSend(c.oid,'adm-cust','💸 זיכינו אותך ב-'+money(amt)+' בגלל '+reason+'. הזיכוי יקוזז אוטומטית בהזמנה הבאה שלך. מצטערים על חוסר הנעימות 🙏',{from:'admin'});
+  if(c.fault==='courier' && p.hasCour) chatSend(c.oid,'adm-cour','לידיעתך: בעקבות '+reason+' בהזמנה #'+c.oid+' נרשם חיוב של '+money(amt)+' בהתחשבנות הקרובה.',{from:'admin'});
+  if(c.fault==='business' && p.hasBiz) chatSend(c.oid,'adm-biz','לידיעתכם: בעקבות '+reason+' בהזמנה #'+c.oid+' נרשם חיוב של '+money(amt)+' בהתחשבנות הקרובה.',{from:'admin'});
+  try{ apiCall('/api/orders/'+encodeURIComponent(c.oid)+'/credit','POST',{amount:amt,reason:reason,fault:c.fault}).catch(()=>{}); }catch(e){}
+  creditEl.style.display='none'; S.creditCtx=null; persistSoon();
+  toast('✓ הלקוח זוכה ב-'+money(amt)+' · נשלחה לו הודעה'); render();
+}
+creditEl.addEventListener('click', e=>{
+  if(e.target===creditEl){ creditEl.style.display='none'; return; }
+  const el=e.target.closest('[data-cr]'); if(!el) return; const a=el.dataset.cr, v=el.dataset.v, c=S.creditCtx;
+  if(a==='close'){ creditEl.style.display='none'; return; }
+  if(a==='preset'){ if(e.target.id==='crCustom'){ c.preset='custom'; return; } c.preset=v; drawCredit(); if(v==='custom'){ const i=document.getElementById('crCustom'); if(i) i.focus(); } }
+  if(a==='reason'){ c.reason=v; drawCredit(); }
+  if(a==='fault'){ c.fault=v; drawCredit(); }
+  if(a==='go') doCredit();
+});
+creditEl.addEventListener('input', e=>{ if(e.target.id==='crCustom'){ const c=S.creditCtx; c.preset='custom'; c.custom=e.target.value; c.amt=crAmount(c); const b=creditEl.querySelector('[data-cr="go"]'); if(b) b.textContent='💸 זכה '+money(c.amt); document.querySelectorAll('#creditBody .crop').forEach(x=>x.classList.toggle('on',x.dataset.v==='custom')); } });
+/* קיזוז זיכוי בהזמנה הבאה */
+function useCredit(total){ const c=Math.min(S.priv.credit||0,total||0); return Math.round(c*10)/10; }
 
 /* support chat overlay (customer / business / courier) */
 const supportEl=document.getElementById('support');
@@ -2107,7 +2355,7 @@ function storeTotal(){ return Object.values(S.cart).reduce((s,x)=>s+x.p*x.q,0); 
 function renderStore(){
   const B=activeBiz();
   if(S.checkout){
-    const goods=storeTotal(), fee=B.fee, total=goods+fee, commission=Math.round(goods*0.05*10)/10;
+    const goods=storeTotal(), fee=B.fee, cred=useCredit(goods+fee), total=Math.round((goods+fee-cred)*10)/10, commission=Math.round(goods*0.05*10)/10;
     storeEl.innerHTML = `${statusbar}
       <div class="pad row sp" style="border-bottom:1px solid var(--line)"><div class="row" style="gap:8px"><button data-sact="back" style="font-size:20px;color:var(--faint)">‹</button><b>תשלום ואישור</b></div><button data-sact="close" style="font-size:22px;color:var(--faint)">×</button></div>
       <div style="flex:1;overflow-y:auto;padding:14px">
@@ -2121,7 +2369,8 @@ function renderStore(){
         <div class="card">
           <div class="row sp" style="margin-bottom:6px"><span class="muted">מוצרים (${storeCount()})</span><span>${money(goods)}</span></div>
           <div class="row sp" style="margin-bottom:6px"><span class="muted">דמי משלוח</span><span>${money(fee)}</span></div>
-          <div class="row sp" style="border-top:1px solid var(--line);padding-top:8px;margin-top:4px"><b>סה״כ לתשלום</b><b>${money(total)}</b></div>
+    ${cred?`<div class="row sp" style="margin-bottom:6px;color:var(--green)"><span>💸 זיכוי מהמוקד</span><span>−${money(cred)}</span></div>`:''}
+    <div class="row sp" style="border-top:1px solid var(--line);padding-top:8px;margin-top:4px"><b>סה״כ לתשלום</b><b>${money(total)}</b></div>
           <div class="faint" style="font-size:11px;margin-top:8px">מזה עמלת פלטפורמה מהעסק (5%): ${money(commission)}</div>
         </div>
       </div>
@@ -2151,7 +2400,8 @@ storeEl.addEventListener('click', e=>{
   if(a==='place'){
     const B=activeBiz();
     const items=Object.values(S.cart).map(x=>({n:x.n,p:x.p,q:x.q})); if(!items.length) return;
-    apiCall('/api/orders','POST',{type:'store',customerId:S.userId,businessId:B.id,bizName:B.name,pickup:B.name,address:S.addr.drop,addressGeo:S.addr.dropGeo||null,items:items,fee:B.fee,pay:S.priv.pay}).then(function(o){ S.live=o; S._liveJson=JSON.stringify(o); S.cart={}; S.checkout=false; storeEl.style.display='none'; S.priv.stage='ostatus'; render(); }).catch(function(){ S.live={id:'L'+Date.now(),type:'store',bizName:B.name,pickup:B.name,address:S.addr.drop,addressGeo:S.addr.dropGeo||null,items:items,fee:B.fee,pay:S.priv.pay,status:0,courier:null}; S._liveJson=JSON.stringify(S.live); S.cart={}; S.checkout=false; storeEl.style.display='none'; S.priv.stage='ostatus'; render(); });
+    const _cu=useCredit(items.reduce((a,x)=>a+x.p*x.q,0)+B.fee); if(_cu){ S.priv.credit=Math.round((S.priv.credit-_cu)*10)/10; toast('קוזז זיכוי של '+money(_cu)); }
+    apiCall('/api/orders','POST',{type:'store',creditUsed:_cu,custName:(S.profile&&S.profile.name)||'לקוח',customerId:S.userId,businessId:B.id,bizName:B.name,pickup:B.name,address:S.addr.drop,addressGeo:S.addr.dropGeo||null,items:items,fee:B.fee,pay:S.priv.pay}).then(function(o){ S.live=o; S._liveJson=JSON.stringify(o); S.cart={}; S.checkout=false; storeEl.style.display='none'; S.priv.stage='ostatus'; render(); }).catch(function(){ S.live={id:'L'+Date.now(),type:'store',bizName:B.name,pickup:B.name,address:S.addr.drop,addressGeo:S.addr.dropGeo||null,items:items,fee:B.fee,pay:S.priv.pay,status:0,courier:null}; S._liveJson=JSON.stringify(S.live); S.cart={}; S.checkout=false; storeEl.style.display='none'; S.priv.stage='ostatus'; render(); });
   }
 });
 

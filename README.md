@@ -1,30 +1,18 @@
-# שליח + — חבילת העלאה ל-Render
+# שליח + — תיקייה מוכנה להעלאה
 
-## מה יש בחבילה
-| קובץ | מה זה |
-|---|---|
-| `server.js` | השרת. מגיש את האפליקציה ושומר הזמנות. השליח מקבל ממנו רק את הרווח שלו, בלי מחיר המשלוח המלא. |
-| `package.json` | הגדרות שהשרת צריך כדי לרוץ ב-Render. |
-| `public/index.html` | האפליקציה, הגרסה העצמאית. כל הדגמה עובדת בתוך טלפון אחד. |
-| `public/connected.html` | אותה אפליקציה, מחוברת לשרת. הזמנה מטלפון אחד מגיעה לשליח בטלפון אחר. |
+כל הקבצים נמצאים כאן ישירות, בלי תיקיות פנימיות:
+- `server.js` — השרת
+- `package.json` — הגדרות ל-Render
+- `index.html` — האפליקציה (עצמאית)
+- `connected.html` — האפליקציה מחוברת לשרת (בין טלפונים)
 
-## איך מעלים (בלי טרמינל)
-1. פותחים את קובץ ה-ZIP במחשב (קליק ימני ← "חלץ הכל").
-2. ב-GitHub נכנסים לפרויקט, למקום שבו נמצא היום `server.js`.
-3. לוחצים **Add file ← Upload files** וגוררים לחלון את **כל התוכן** של התיקייה `shaliach-plus`: את `server.js`, את `package.json`, את `README.md` ואת התיקייה `public`.
-4. לוחצים **Commit changes**.
-5. Render יתעדכן לבד תוך 1–3 דקות (לשונית Events). אם לא, לוחצים **Manual Deploy ← Deploy latest commit**.
+## העלאה ל-GitHub
+1. חלץ את ה-ZIP ופתח את התיקייה `shaliach-plus-new`.
+2. לחץ Ctrl+A כדי לסמן את כל הקבצים.
+3. ב-GitHub, בעמוד הראשי של המאגר, לחץ Add file ← Upload files וגרור את כל הקבצים פנימה.
+4. לחץ Commit changes.
 
-## הגדרות ב-Render (Settings)
-- **Build Command:** `npm install`
-- **Start Command:** `node server.js`
-- **Root Directory:** אם הקבצים נמצאים בתוך תיקייה בפרויקט (למשל `zariz-deploy`), צריך לכתוב כאן את שם התיקייה. אם הם בשורש הפרויקט, משאירים ריק.
-
-## כתובות באתר
-- `https://הכתובת-שלך.onrender.com/` מציגה את האפליקציה (עצמאית).
-- `https://הכתובת-שלך.onrender.com/connected.html` מציגה את האפליקציה המחוברת לשרת.
-- `https://הכתובת-שלך.onrender.com/api/health` היא בדיקה שהשרת חי.
-
-## חשוב לדעת
-- בתוכנית החינמית של Render, הקובץ `db.json` (ההזמנות) נמחק בכל עדכון או הפעלה מחדש. לשמירה קבועה צריך דיסק קבוע (Disk) או מסד נתונים.
-- זיהוי מיקום וחיפוש עסקים עובדים רק בכתובת המאובטחת (https) של Render.
+## הגדרות Render
+- Build Command: `npm install`
+- Start Command: `node server.js`
+- Root Directory: ריק
