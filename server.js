@@ -10,7 +10,14 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-const PUBLIC = path.join(__dirname, 'public');
+// האפליקציה נמצאת בתיקייה public. אם התיקייה לא הועלתה ו-index.html נמצא ליד server.js — משתמשים בו משם.
+function findPublic() {
+  const cands = [path.join(__dirname, 'public'), __dirname, path.join(__dirname, 'shaliach-plus', 'public')];
+  for (const d of cands) if (fs.existsSync(path.join(d, 'index.html'))) return d;
+  return path.join(__dirname, 'public');
+}
+const PUBLIC = findPublic();
+const SAFE_EXT = ['.html', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.webmanifest', '.css'];
 const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'db.json');
 
 /* ---------- מסד נתונים (קובץ JSON) ---------- */
@@ -64,15 +71,20 @@ function serveStatic(req, res, pathname) {
   if (p === '/' || p === '') p = '/index.html';
   const file = path.normalize(path.join(PUBLIC, p));
   if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
-  fs.readFile(file, (err, data) => {
+  if (PUBLIC === __dirname && !SAFE_EXT.includes(path.extname(file).toLowerCase())) p = '/index.html'; // לא חושפים את קבצי השרת
+  const target = (p === '/index.html') ? path.join(PUBLIC, 'index.html') : file;
+  fs.readFile(target, (err, data) => {
     if (err) {
       // כתובות כמו /s/erez-bakery — מחזירים את האפליקציה
       return fs.readFile(path.join(PUBLIC, 'index.html'), (e2, d2) => {
-        if (e2) { res.writeHead(404); return res.end('Not found'); }
+        if (e2) {
+          res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+          return res.end('<div dir="rtl" style="font-family:sans-serif;padding:30px;font-size:18px">השרת עובד ✓ אבל הקובץ <b>index.html</b> לא נמצא.<br>צריך להעלות ל-GitHub את התיקייה <b>public</b> (ובתוכה index.html) — או את index.html ליד server.js.</div>');
+        }
         res.writeHead(200, { 'Content-Type': TYPES['.html'] }); res.end(d2);
       });
     }
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': p.endsWith('.html') ? 'no-cache' : 'public, max-age=3600' });
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(target)] || 'application/octet-stream', 'Cache-Control': p.endsWith('.html') ? 'no-cache' : 'public, max-age=3600' });
     res.end(data);
   });
 }
@@ -147,4 +159,4 @@ const server = http.createServer(async (req, res) => {
     console.error(e); send(res, 500, { error: 'server error' });
   }
 });
-server.listen(PORT, () => console.log('שליח + פועל על פורט ' + PORT));
+server.listen(PORT, () => console.log('שליח + פועל על פורט ' + PORT + ' · אפליקציה מ: ' + PUBLIC + (fs.existsSync(path.join(PUBLIC,'index.html')) ? ' ✓' : ' ✗ index.html חסר!')));
